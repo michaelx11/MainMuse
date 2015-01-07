@@ -6,12 +6,12 @@ var favicon = require('serve-favicon');
 var authConfig = require('./authConfig');
 /*
 var passport = require('passport');
-var routes = require('./routes');
 var FacebookStrategy = require("passport-facebook").Strategy;
 */
 
 var firebase = require('./firebase');
 var model = require('./model');
+var routes = require('./routes');
 
 var app = express();
 
@@ -42,76 +42,7 @@ if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
-function getLog(logName, callback) {
-  root.child(logName).once('value', function(logData) {
-    var logs = [];
-    var logObject = logData.val();
-    if (!logObject) {
-      console.log("current log contains no data");
-    } else {
-      var revKeys = Object.keys(logObject).reverse();
-      var u = 0;
-      for (var i in revKeys) {
-        var key = revKeys[i];
-        if (u >= NUM_RECORDS) {
-          break;
-        }
-        logs.push(logObject[key]);
-        u++;
-      }
-    }
-    callback(logs.reverse());
-  });
-}
-
-function handleChat(req, res) {
-  var message = req.query.message;
-  if (message) {
-    root.child('counter').transaction(function(count) {
-      return count + 1;
-    }, function(error, commit, snapshot) {
-      if (error) {
-        console.log("YO ERROR");
-        res.end();
-        return;
-      }
-      var c = snapshot.val();
-      root.child('currentLog').once('value', function(data) {
-        var currLog = data.val();
-        if (!currLog) {
-          console.log("current log value empty");
-          res.end();
-          return;
-        }
-        root.child(currLog).child(''+c).set(message);
-        getLog(currLog, function(logData) {
-          res.send({"log" : logData, "counter": c});
-        });
-      });
-    });
-  } else {
-    root.child('counter').once('value', function(counterData) {
-      var counter = counterData.val();
-      if (!counter) {
-        console.log("couldn't get counter value");
-        res.end();
-        return;
-      }
-      root.child('currentLog').once('value', function(data) {
-        var currLog = data.val();
-        if (!currLog) {
-          console.log("current log value empty");
-          return;
-        }
-        getLog(currLog, function(logData) {
-          res.send({"log": logData, "counter": counter});
-        });
-      });
-    });
-  }
-}
-
-app.get('/mychatroom', handleChat);
+app.get('/verifyuser', routes.verifyUser);
 
 http.createServer(app).listen(app.get('port'), function() {
   console.log('Express server listening on port ' + app.get('port'));
