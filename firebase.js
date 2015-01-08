@@ -35,7 +35,7 @@ var http = require('http');
  
  
 var DEFAULT_INTERVAL = 20 * 60 * 60;
-var DEFAULT_SYNC_OBJECT = {status: "pending", head: 0, tail: 0, timestamp: 0, interval: DEFAULT_INTERVAL};
+var DEFAULT_SYNC_OBJECT = {status: "pending", head: 0, tail: 0, timestamp: 0, interval: DEFAULT_INTERVAL, name: ""};
 var ADMIN = {'michael': true};
 
 // Keep track of current active users
@@ -81,9 +81,9 @@ function genSecretUpper(length) {
  * matches the authentic token
  *
  */
-function validateToken(username, token, cbError) {
+function validateToken(username, token, cbNameError) {
   if (!checkString(username)) {
-    cbError("User id contains invalid characters.");
+    cbNameError(false, "User id contains invalid characters.");
     return;
   }
 
@@ -92,12 +92,16 @@ function validateToken(username, token, cbError) {
     .child('token').once('value', function(tokenData) {
       var storedToken = tokenData.val();
       if (!(storedToken && (storedToken === token))) {
-        cbError("Error token does not match.");
+        cbError(false, "Error token does not match.");
         return;
       }
 
-      cbError(false);
-      return;
+      root.child('users')
+        .child(username)
+        .child('name').once('value', function(nameData) {
+          var name = nameData.val();
+          cbNameError(name, false);
+        });
     });
 }
 
@@ -136,7 +140,7 @@ function addFriend(userid, token, otherFriendCode, cbError) {
     return;
   }
 
-  validateToken(userid, token, function(error) {
+  validateToken(userid, token, function(name, error) {
     if (error) {
       cbError(error);
       return;
@@ -161,6 +165,7 @@ function addFriend(userid, token, otherFriendCode, cbError) {
           } else {
             var newSync = DEFAULT_SYNC_OBJECT;
             newSync.status = "accepted";
+            newSync.name = name;
             return newSync;
           }
         }, function(err, committed, snapshot) {
@@ -196,7 +201,7 @@ function createQueueIfNeeded(username, token, targetuser, cbError) {
     return;
   }
 
-  validateToken(username, token, function(error) {
+  validateToken(username, token, function(name, error) {
     if (error) {
       cbError(error);
       return;
@@ -222,7 +227,9 @@ function createQueueIfNeeded(username, token, targetuser, cbError) {
             cbError(error);
             return;
           }
-          var queue = {sync: DEFAULT_SYNC_OBJECT};
+          var syncObject = DEFAULT_SYNC_OBJECT;
+          syncObject.name = name;
+          var queue = {sync: syncObject};
           var messagelog = {log: {"-1" : "placeholder"}};
 
           root.child('users').child(username).child('queues').child(targetuser).child('sync').set(queue);
@@ -326,7 +333,7 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
     return;
   }
 
-  validateToken(username, token, function(error) {
+  validateToken(username, token, function(name, error) {
     if (error) {
       cbDataError(false, error);
       return;
@@ -339,7 +346,9 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
       .child('sync').transaction(function(syncObj) {
         if (!syncObj) {
           // retry
-          return DEFAULT_SYNC_OBJECT;
+          var obj = DEFAULT_SYNC_OBJECT;
+          obj.name = name;
+          return obj;
         }
 
         // Check if that message exists
@@ -380,7 +389,7 @@ function readQueue(username, token, sourceuser, cbDataError) {
     return;
   }
 
-  validateToken(username, token, function(error) {
+  validateToken(username, token, function(name, error) {
     if (error) {
       cbDataError(false, error);
       return;
@@ -393,7 +402,9 @@ function readQueue(username, token, sourceuser, cbDataError) {
       .child('sync').transaction(function(syncObj) {
         if (!syncObj) {
           // retry
-          return DEFAULT_SYNC_OBJECT;
+          var obj = DEFAULT_SYNC_OBJECT;
+          obj.name = name;
+          return obj;
         }
 
         // Can get new item
@@ -543,7 +554,8 @@ function getUserData(userid, token, cbUserError) {
   root.child('users')
     .child(userid).once('value', function(userData) {
       var user = userData.val();
-      if (!user) {
+      if (!user['token']) {
+        console.log("user is false");
         cbUserError(false, "Invalid user or token.");
         return;
       }
@@ -551,6 +563,7 @@ function getUserData(userid, token, cbUserError) {
       var storedToken = user['token'];
 
       if (!(storedToken && (storedToken === token))) {
+        console.log("token dooesn't match");
         cbUserError("Invalid user or token.");
         return;
       }

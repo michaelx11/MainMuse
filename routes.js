@@ -45,7 +45,7 @@ function initializeUser(req, res) {
       return;
     }
 
-    res.send({"accesstoken": token});
+    res.send({"accesstoken": accesstoken});
   });
 }
 
@@ -162,11 +162,15 @@ function getUserData(req, res) {
     res.send({"error": "missing parameters."});
     return;
   }
+  console.log(id);
 
   model.getUserData(id, token, function(userData, error) {
     if (error) {
+      console.log(error);
       res.send({"error": error});
     } else {
+      console.log("printing result");
+      console.log(JSON.stringify(userData));
       res.send(userData);
     }
   });
