@@ -321,6 +321,60 @@ function appendQueue(username, token, targetuser, message, cbError) {
   });
 }
 
+function editQueue(userid, token, targetuser, index, message, cbError) {
+  if (!(checkString(userid) && checkString(targetuser))) {
+    cbError("User " + userid + " or target user " + targetuser + " contains invalid characters.");
+    return;
+  }
+
+  validateToken(username, token, function(error) {
+    if (error) {
+      cbDataError(false, error);
+      return;
+    }
+
+    root.child('users')
+      .child(targetuser)
+      .child('queues')
+      .child(userid)
+      .child('sync').transaction(function(syncObj) {
+        if (!syncObj) {
+          // retry
+          return DEFAULT_SYNC_OBJECT;
+        }
+
+        // Check if that message exists
+        if (syncObj.tail <= index && index > 0) {
+          return syncObj;
+        }
+
+        // abort
+        return;
+      }, function(err, committed, data) {
+        if (err) {
+          cbDataError(false, err);
+          return;
+        }
+        if (!committed) {
+          cbDataError(false, 'Edit queue, transaction failed to commit');
+          return;
+        }
+        var syncObj = data.val();
+        if (!syncObj) {
+          cbError("No sync data found in appendQueue.");
+          return;
+        }
+
+        root.child('users')
+          .child(targetuser)
+          .child('messages')
+          .child(userid)
+          .child('log')
+          .child(index).set(message);
+      });
+  });
+}
+
 function readQueue(username, token, sourceuser, cbDataError) {
 
   if (!(checkString(username) && checkString(sourceuser))) {
@@ -340,7 +394,7 @@ function readQueue(username, token, sourceuser, cbDataError) {
       .child(sourceuser)
       .child('sync').transaction(function(syncObj) {
         if (!syncObj) {
-          // abort
+          // retry
           return DEFAULT_SYNC_OBJECT;
         }
 
@@ -392,6 +446,7 @@ function readQueue(username, token, sourceuser, cbDataError) {
       });
   });
 }
+
 
 function checkFriendCode(code, cbDataError) {
   root.child('codes')
@@ -458,4 +513,29 @@ function createUser(name, userid, email, cbTokenCodeError) {
         return;
       });
   });
+}
+
+function getUserData(userid, token, cbUserError) {
+  if (!checkString(userid)) {
+    cbUserError(false, "User id contains invalid characters.");
+    return;
+  }
+  root.child('users')
+    .child(userid).once('value', function(userData) {
+      var user = userData.val();
+      if (!user) {
+        cbUserError(false, "Invalid user or token.");
+        return;
+      }
+
+      var storedToken = user['token'];
+
+      if (!(storedToken && (storedToken === token))) {
+        cbUserError("Invalid user or token.");
+        return;
+      }
+
+      cbUserError(user, false);
+      return;
+    });
 }
