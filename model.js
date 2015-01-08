@@ -50,3 +50,6 @@ exports.readQueue = firebase.readQueue;
 
 // function getUserData(userid, token, cbUserError)
 exports.getUserData = firebase.getUserData;
+
+// function getMessageList(userid, token, sourceuser, cbMessagesError)
+exports.getMessageList = firebase.getMessageList;

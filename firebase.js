@@ -92,7 +92,7 @@ function validateToken(username, token, cbNameError) {
     .child('token').once('value', function(tokenData) {
       var storedToken = tokenData.val();
       if (!(storedToken && (storedToken === token))) {
-        cbError(false, "Error token does not match.");
+        cbNameError(false, "Error token does not match.");
         return;
       }
 
@@ -243,8 +243,8 @@ function createQueueIfNeeded(username, token, targetuser, cbError) {
           var queue = {sync: syncObject};
           var messagelog = {log: {"-1" : "placeholder"}};
 
-          root.child('users').child(username).child('queues').child(targetuser).child('sync').set(queue);
-          root.child('users').child(username).child('messages').child(targetuser).child('log').set(messagelog);
+          root.child('users').child(targetuser).child('queues').child(username).child('sync').set(queue);
+          root.child('users').child(targetuser).child('messages').child(username).child('log').set(messagelog);
           cbError(false);
         });
     });
@@ -334,6 +334,7 @@ function appendQueue(username, token, targetuser, message, cbError) {
           .child(username)
           .child('log')
           .child(newTail).set(message);
+        cbError(false);
       });
   });
 }
@@ -344,9 +345,9 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
     return;
   }
 
-  validateToken(username, token, function(name, error) {
+  validateToken(userid, token, function(name, error) {
     if (error) {
-      cbDataError(false, error);
+      cbError(error);
       return;
     }
 
@@ -362,8 +363,8 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
           return obj;
         }
 
-        // Check if that message exists
-        if (syncObj.tail <= index && index > syncObj.tail) {
+        // Check if that message exists and is not the head
+        if (parseInt(syncObj.head) < parseInt(index) && parseInt(index) <= parseInt(syncObj.tail)) {
           return syncObj;
         }
 
@@ -371,11 +372,11 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
         return;
       }, function(err, committed, data) {
         if (err) {
-          cbDataError(false, err);
+          cbError(err);
           return;
         }
         if (!committed) {
-          cbDataError(false, 'Edit queue, transaction failed to commit');
+          cbError('Edit queue, transaction failed to commit');
           return;
         }
         var syncObj = data.val();
@@ -384,12 +385,18 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
           return;
         }
 
-        root.child('users')
-          .child(targetuser)
-          .child('messages')
-          .child(userid)
-          .child('log')
-          .child(index).set(message);
+        if (index > syncObj.head && index <= syncObj.tail) {
+          console.log(message);
+          root.child('users')
+            .child(targetuser)
+            .child('messages')
+            .child(userid)
+            .child('log')
+            .child(index).set(message);
+          cbError(false);
+        } else {
+          cbError("Index is no longer in a valid range");
+        }
       });
   });
 }
@@ -454,13 +461,14 @@ function readQueue(username, token, sourceuser, cbDataError) {
           .child(sourceuser)
           .child('log')
           .child(''+head).once('value', function(messageData) {
+            console.log(''+head + " " + sourceuser);
             var message = messageData.val();
             if (!message) {
               cbDataError(false, "Message does not exist yet");
               return;
             }
             
-            cbDataError(message, false);
+            cbDataError(JSON.parse(message), false);
             return;
           });
       });
@@ -513,7 +521,6 @@ function getUserAccessToken(name, userid, email, cbTokenError) {
         return;
       }
 
-      console.log(token);
       cbTokenError(token, false);
       return;
     });
@@ -584,6 +591,61 @@ function getUserData(userid, token, cbUserError) {
     });
 }
 
+// Gets list of messages in the queue 
+function getMessageList(userid, token, targetuser, cbMessagesError) {
+  if (!(checkString(userid) && checkString(targetuser))) {
+    cbMessagesError(false, "userid " + userid + " or target userid " + targetuser + " contains invalid characters.");
+    return;
+  }
+
+  validateToken(userid, token, function(name, error) {
+    if (error) {
+      cbMessagesError(false, error);
+      return;
+    }
+
+    root.child('users')
+      .child(targetuser)
+      .child('queues')
+      .child(userid)
+      .child('sync').once('value', function(syncData) {
+        var syncObj = syncData.val();
+        if (syncObj) {
+        } else {
+          cbMessagesError(false, "Queue does not exist.");
+          return;
+        }
+
+        var head = syncObj.head;
+        var tail = syncObj.tail;
+
+        root.child('users')
+          .child(targetuser)
+          .child('messages')
+          .child(userid)
+          .child('log').once('value', function(logData) {
+            var log = logData.val();
+            if (!log) {
+              cbMessagesError(false, 'Message log does not exist.');
+              return;
+            }
+
+
+            // The messages are stored as JSON strings
+            var parsedObj = {};
+            for (key in log) {
+              console.log('checking key: ' + key);
+              if (parseInt(key) >= parseInt(head) && parseInt(key) <= parseInt(tail)) {
+                parsedObj[key] = JSON.parse(log[key]);
+              }
+            }
+
+            cbMessagesError(parsedObj, false);
+          });
+      });
+  });
+}
+
 exports.addFriend = addFriend;
 exports.appendQueue = appendQueue;
 exports.editQueue = editQueue;
@@ -591,3 +653,4 @@ exports.readQueue = readQueue;
 exports.createUser = createUser;
 exports.getUserData = getUserData;
 exports.getUserAccessToken = getUserAccessToken;
+exports.getMessageList = getMessageList;

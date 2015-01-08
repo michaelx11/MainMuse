@@ -162,16 +162,38 @@ function getUserData(req, res) {
     res.send({"error": "missing parameters."});
     return;
   }
-  console.log(id);
 
   model.getUserData(id, token, function(userData, error) {
     if (error) {
       console.log(error);
       res.send({"error": error});
     } else {
-      console.log("printing result");
-      console.log(JSON.stringify(userData));
       res.send(userData);
+    }
+  });
+}
+
+function getMessageList(req, res) {
+  if (!req.query) {
+    res.send({"error": "no parameters."});
+    return;
+  }
+
+  var id = req.query.id;
+  var token = req.query.token;
+  var targetid = req.query.targetid;
+  
+  if (!(id && token && targetid)) {
+    res.send({"error": "missing parameters."});
+    return;
+  }
+
+  model.getMessageList(id, token, targetid, function(messages, error) {
+    if (error) {
+      res.send({"error": error});
+    } else {
+      console.log(messages);
+      res.send({"messages": messages});
     }
   });
 }
@@ -183,3 +205,4 @@ exports.appendMessage = appendMessage;
 exports.editMessage = editMessage;
 exports.readMessage = readMessage;
 exports.getUserData = getUserData;
+exports.getMessageList = getMessageList;

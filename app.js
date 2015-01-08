@@ -23,10 +23,6 @@ app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(express.static(__dirname + '/public'));
 app.use(express.session({ secret: 'SECRET' }));
-/*
-app.use(passport.initialize());
-app.use(passport.session());
-*/
 
 //app.use(routes.initialRouter);
 app.use(app.router);
@@ -45,6 +41,7 @@ app.get('/appendmessage', routes.appendMessage);
 app.get('/editmessage', routes.editMessage);
 app.get('/readmessage', routes.readMessage);
 app.get('/getuserdata', routes.getUserData);
+app.get('/getmessagelist', routes.getMessageList);
 
 http.createServer(app).listen(app.get('port'), function() {
   console.log('Express server listening on port ' + app.get('port'));
