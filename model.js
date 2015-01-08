@@ -24,12 +24,12 @@ function verifyFBAccessToken(userId, fbToken, cbError) {
  * creates the user if necessary.
  */
 function initializeUser(userId, fbToken, userName, userEmail, cbTokenError) {
-  verifyFBAccesstoken(userId, fbToken, function(error) {
+  verifyFBAccessToken(userId, fbToken, function(error) {
     if (error) {
       cbTokenError(false, "Invalid FB login token.");
       return;
     }
-    firebase.getUserAccessToken(cbTokenError);
+    firebase.getUserAccessToken(userName, userId, userEmail, cbTokenError);
   });
 }
 

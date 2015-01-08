@@ -491,6 +491,7 @@ function getUserAccessToken(name, userid, email, cbTokenError) {
         return;
       }
 
+      console.log(token);
       cbTokenError(token, false);
       return;
     });
@@ -499,9 +500,9 @@ function getUserAccessToken(name, userid, email, cbTokenError) {
 /**
  * Only call this method when the user id has been verified!
  */
-function createUser(name, userid, email, cbTokenCodeError) {
+function createUser(name, userid, email, cbTokenError) {
   if (!checkString(userid)) {
-    cbTokenCodeError(false, false, "Invalid user id!");
+    cbTokenError(false, "Invalid user id!");
     return;
   }
 
@@ -510,7 +511,7 @@ function createUser(name, userid, email, cbTokenCodeError) {
   var accessToken = genSecret(24);
   getUnusedFriendCode(0, function(friendCode, error) {
     if (error) {
-      cbTokenCodeError(false, false, "Could not obtain unused friend code.");
+      cbTokenError(false, "Could not obtain unused friend code.");
       return;
     }
     userObj['friendcode'] = friendCode;
@@ -521,14 +522,14 @@ function createUser(name, userid, email, cbTokenCodeError) {
       .once('value', function(userData) {
         var storedUser = userData.val();
         if (storedUser) {
-          cbTokenCodeError(storedUser['token'], storedUser['friendcode'], false);
+          cbTokenError(storedUser['token'], storedUser['friendcode'], false);
           return;
         }
 
         root.child('users').child(userid).set(userObj);
         root.child('codes').child(friendCode).set(userid);
 
-        cbTokenCodeError(accessToken, friendCode, false);
+        cbTokenError(accessToken, false);
         return;
       });
   });
@@ -559,9 +560,10 @@ function getUserData(userid, token, cbUserError) {
     });
 }
 
-exports.addFriend = addFriend
-exports.appendQueue = appendQueue
-exports.editQueue = editQueue
-exports.readQueue = readQueue
-exports.createUser = createUser
-exports.getUserData = getUserData
+exports.addFriend = addFriend;
+exports.appendQueue = appendQueue;
+exports.editQueue = editQueue;
+exports.readQueue = readQueue;
+exports.createUser = createUser;
+exports.getUserData = getUserData;
+exports.getUserAccessToken = getUserAccessToken;
