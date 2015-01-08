@@ -264,7 +264,6 @@ function canGetNewMessage(syncObject) {
  *  - targetuser exists
  */
 function appendQueue(username, token, targetuser, message, cbError) {
-
   if (!(checkString(username) && checkString(targetuser))) {
     cbError("Username " + username + " or target username " + targetuser + " contains invalid characters.");
     return;
@@ -344,7 +343,7 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
         }
 
         // Check if that message exists
-        if (syncObj.tail <= index && index > 0) {
+        if (syncObj.tail <= index && index > syncObj.tail) {
           return syncObj;
         }
 
@@ -376,7 +375,6 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
 }
 
 function readQueue(username, token, sourceuser, cbDataError) {
-
   if (!(checkString(username) && checkString(sourceuser))) {
     cbDataError(false, "Username " + username + " or source username " + sourceuser + " contains invalid characters.");
     return;
@@ -478,6 +476,27 @@ function getUnusedFriendCode(counter, cbDataError) {
 }
 
 /**
+ * Call this method only when the user id has been verified with Facebook
+ * 
+ * NOTE: really only needs a valid userid, the other parameters are used
+ * if an account needs to be created
+ */
+function getUserAccessToken(name, userid, email, cbTokenError) {
+  root.child('users')
+    .child(userid)
+    .child('token').once('value', function(tokenData) {
+      var token = tokenData.val();
+      if (!token) {
+        createUser(name, userid, email, cbTokenError);
+        return;
+      }
+
+      cbTokenError(token, false);
+      return;
+    });
+}
+
+/**
  * Only call this method when the user id has been verified!
  */
 function createUser(name, userid, email, cbTokenCodeError) {
@@ -539,3 +558,10 @@ function getUserData(userid, token, cbUserError) {
       return;
     });
 }
+
+exports.addFriend = addFriend
+exports.appendQueue = appendQueue
+exports.editQueue = editQueue
+exports.readQueue = readQueue
+exports.createUser = createUser
+exports.getUserData = getUserData
