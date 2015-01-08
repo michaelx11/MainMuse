@@ -39,6 +39,12 @@ if ('development' == app.get('env')) {
 }
 
 app.get('/verifyuser', routes.verifyUser);
+app.get('/initializeuser', routes.initializeUser);
+app.get('/addfriend', routes.addFriend);
+app.get('/appendmessage', routes.appendMessage);
+app.get('/editmessage', routes.editMessage);
+app.get('/readmessage', routes.readMessage);
+app.get('/getuserdata', routes.getUserData);
 
 http.createServer(app).listen(app.get('port'), function() {
   console.log('Express server listening on port ' + app.get('port'));
