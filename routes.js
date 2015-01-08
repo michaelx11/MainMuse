@@ -64,11 +64,11 @@ function addFriend(req, res) {
     return;
   }
 
-  model.addFriend(id, token, code, function(error) {
+  model.addFriend(id, token, code, function(name, error) {
     if (error) {
       res.send({'error': error});
     } else {
-      res.send({'success': true});
+      res.send({'name': name});
     }
   });
 }

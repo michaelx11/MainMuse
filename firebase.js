@@ -133,51 +133,62 @@ function validateUser(username, cbError) {
  *  - token for username is correct
  *
  */
-function addFriend(userid, token, otherFriendCode, cbError) {
+function addFriend(userid, token, otherFriendCode, cbNameError) {
   // check any paths used for Firebase
   if (!(checkString(userid) && checkString(otherFriendCode))) {
-    cbError("Invalid userid or friend code.");
+    cbNameError(false, "Invalid userid or friend code.");
     return;
   }
 
   validateToken(userid, token, function(name, error) {
     if (error) {
-      cbError(error);
+      cbNameError(false, error);
       return;
     }
 
     checkFriendCode(otherFriendCode, function(otherid, error2) {
       if (error2) {
-        cbError(error2);
+        cbNameError(false, error2);
         return;
       }
 
-      // We can assume that the returned id is valid
       root.child('users')
-        .child(userid)
-        .child('queues')
         .child(otherid)
-        .child('sync').transaction(function(syncObject) {
-          // Either accept the request or build a new object with it accepted
-          if (syncObject) {
-            syncObject.status = "accepted";
-            return syncObject;
-          } else {
-            var newSync = DEFAULT_SYNC_OBJECT;
-            newSync.status = "accepted";
-            newSync.name = name;
-            return newSync;
-          }
-        }, function(err, committed, snapshot) {
-          if (err) {
-            cbError(err);
+        .child('name').once('value', function(nameData) {
+          var friendName = nameData.val();
+          if (!friendName) {
+            cbNameError(false, "Other user does not exist.");
             return;
           }
+          // We can assume that the returned id is valid
+          root.child('users')
+            .child(userid)
+            .child('queues')
+            .child(otherid)
+            .child('sync').transaction(function(syncObject) {
+              // Either accept the request or build a new object with it accepted
+              if (syncObject) {
+                syncObject.status = "accepted";
+                return syncObject;
+              } else {
+                var newSync = DEFAULT_SYNC_OBJECT;
+                newSync.status = "accepted";
+                newSync.name = friendName;
+                return newSync;
+              }
+            }, function(err, committed, snapshot) {
+              if (err) {
+                cbNameError(false, err);
+                return;
+              }
 
-          if (!committed) {
-            cbError("Add friend transaction aborted.");
-            return;
-          }
+              if (!committed) {
+                cbNameError(false, "Add friend transaction aborted.");
+                return;
+              }
+
+              cbNameError(friendName, false);
+            });
         });
     });
   });
