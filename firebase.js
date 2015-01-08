@@ -60,10 +60,18 @@ function getCurrTimeMillis() {
   return (new Date()).getTime();
 }
 
-function genSecret() {
+function genSecret(length) {
     var text = "";
     var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (var i=0; i < 8; i++)
+    for (var i=0; i < length; i++)
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+}
+
+function genSecretUpper(length) {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    for (var i=0; i < length; i++)
         text += possible.charAt(Math.floor(Math.random() * possible.length));
     return text;
 }
@@ -74,6 +82,11 @@ function genSecret() {
  *
  */
 function validateToken(username, token, cbError) {
+  if (!checkString(username)) {
+    cbError("User id contains invalid characters.");
+    return;
+  }
+
   root.child('users')
     .child(username)
     .child('token').once('value', function(tokenData) {
@@ -107,18 +120,65 @@ function validateUser(username, cbError) {
 }
 
 /**
- * Send friend request or accept an outstanding one
+ * Either makes a blank queue with [status : accepted] or
+ * sets the status to accepted for the queue corresponding to
+ * "other friend".
  *
  * verifies:
  *  - username exists
  *  - token for username is correct
- *  - targetuser exists
  *
  */
-function sendOrAcceptFriendRequest(username, token, targetuser, cbError) {
+function addFriend(userid, token, otherFriendCode, cbError) {
+  // check any paths used for Firebase
+  if (!(checkString(userid) && checkString(otherFriendCode))) {
+    cbError("Invalid userid or friend code.");
+    return;
+  }
+
+  validateToken(userid, token, function(error) {
+    if (error) {
+      cbError(error);
+      return;
+    }
+
+    checkFriendCode(otherFriendCode, function(otherid, error2) {
+      if (error2) {
+        cbError(error2);
+        return;
+      }
+
+      // We can assume that the returned id is valid
+      root.child('users')
+        .child(userid)
+        .child('queues')
+        .child(otherid)
+        .child('sync').transaction(function(syncObject) {
+          // Either accept the request or build a new object with it accepted
+          if (syncObject) {
+            syncObject.status = "accepted";
+            return syncObject;
+          } else {
+            var newSync = DEFAULT_SYNC_OBJECT;
+            newSync.status = "accepted";
+            return newSync;
+          }
+        }, function(err, committed, snapshot) {
+          if (err) {
+            cbError(err);
+            return;
+          }
+
+          if (!committed) {
+            cbError("Add friend transaction aborted.");
+            return;
+          }
+        });
+    });
+  });
 }
 
-// Should optimize, right now reads the whole user in
+// NOTE: username and target user correspond to user id's, not full names
 /**
  * Creates and sets up a queue belonging to [username] for [targetuser]
  *
@@ -329,6 +389,73 @@ function readQueue(username, token, sourceuser, cbDataError) {
             cbDataError(message, false);
             return;
           });
+      });
+  });
+}
+
+function checkFriendCode(code, cbDataError) {
+  root.child('codes')
+    .child(code).once('value', function(data) {
+      var userId = data.val();
+      if (!userId) {
+        cbDataError(false, "Code does not exist.");
+        return;
+      }
+
+      cbDataError(userId, false);
+    });
+}
+
+function getUnusedFriendCode(counter, cbDataError) {
+  var MAX_TRIES = 8;
+  if (counter > MAX_TRIES) {
+    cbDataError(false, "Failed to find unused token!");
+    return;
+  }
+  var friendCode = genSecret(6);
+  checkFriendCode(friendCode, function(userId, error) {
+    if (error) {
+      cbDataError(friendCode, false);
+      return;
+    }
+    getUnusedFriendCode(counter + 1, cbDataError);
+  });
+}
+
+/**
+ * Only call this method when the user id has been verified!
+ */
+function createUser(name, userid, email, cbTokenCodeError) {
+  if (!checkString(userid)) {
+    cbTokenCodeError(false, false, "Invalid user id!");
+    return;
+  }
+
+  var userObj = {"name" : name, "id" : userid, "email" : email};
+
+  var accessToken = genSecret(24);
+  getUnusedFriendCode(0, function(friendCode, error) {
+    if (error) {
+      cbTokenCodeError(false, false, "Could not obtain unused friend code.");
+      return;
+    }
+    userObj['friendcode'] = friendCode;
+    userObj['token'] = accessToken;
+
+    root.child('users')
+      .child(userid)
+      .once('value', function(userData) {
+        var storedUser = userData.val();
+        if (storedUser) {
+          cbTokenCodeError(storedUser['token'], storedUser['friendcode'], false);
+          return;
+        }
+
+        root.child('users').child(userid).set(userObj);
+        root.child('codes').child(friendCode).set(userid);
+
+        cbTokenCodeError(accessToken, friendCode, false);
+        return;
       });
   });
 }

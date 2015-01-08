@@ -4,10 +4,6 @@ var Firebase = require('firebase');
 var hbs = require('hbs');
 var favicon = require('serve-favicon');
 var authConfig = require('./authConfig');
-/*
-var passport = require('passport');
-var FacebookStrategy = require("passport-facebook").Strategy;
-*/
 
 var firebase = require('./firebase');
 var model = require('./model');
