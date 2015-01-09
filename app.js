@@ -24,7 +24,6 @@ app.use(express.methodOverride());
 app.use(express.static(__dirname + '/public'));
 app.use(express.session({ secret: 'SECRET' }));
 
-//app.use(routes.initialRouter);
 app.use(app.router);
 
 console.log(__dirname);

@@ -34,7 +34,8 @@ var http = require('http');
  */
  
  
-var DEFAULT_INTERVAL = 20 * 60 * 60;
+var DEFAULT_INTERVAL = 20 * 60 * 60 * 1000;
+//var DEFAULT_INTERVAL = 2 * 60 * 1000;
 var DEFAULT_SYNC_OBJECT = {status: "pending", head: 0, tail: 0, timestamp: 0, interval: DEFAULT_INTERVAL, name: ""};
 var ADMIN = {'michael': true};
 
@@ -495,7 +496,7 @@ function getUnusedFriendCode(counter, cbDataError) {
     cbDataError(false, "Failed to find unused token!");
     return;
   }
-  var friendCode = genSecret(6);
+  var friendCode = genSecretUpper(6);
   checkFriendCode(friendCode, function(userId, error) {
     if (error) {
       cbDataError(friendCode, false);
@@ -634,7 +635,6 @@ function getMessageList(userid, token, targetuser, cbMessagesError) {
             // The messages are stored as JSON strings
             var parsedObj = {};
             for (key in log) {
-              console.log('checking key: ' + key);
               if (parseInt(key) >= parseInt(head) && parseInt(key) <= parseInt(tail)) {
                 parsedObj[key] = JSON.parse(log[key]);
               }
