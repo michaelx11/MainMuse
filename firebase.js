@@ -36,6 +36,8 @@ var http = require('http');
  
 var DEFAULT_INTERVAL = 20 * 60 * 60 * 1000;
 //var DEFAULT_INTERVAL = 2 * 60 * 1000;
+var ADMIN_TOKEN = "LwL0cHXCSgYdeMeuCEqPLGcH";
+var ADMIN_FRIEND_CODE = "MXMZMX";
 var DEFAULT_SYNC_OBJECT = {status: "pending", head: 0, tail: 0, timestamp: 0, interval: DEFAULT_INTERVAL, name: ""};
 var ADMIN = {'michael': true};
 
@@ -232,8 +234,6 @@ function createQueueIfNeeded(username, token, targetuser, cbError) {
           return;
         }
 
-        console.log("creating!");
-
         validateUser(targetuser, function(error) {
           if (error) {
             cbError(error);
@@ -244,8 +244,8 @@ function createQueueIfNeeded(username, token, targetuser, cbError) {
           var queue = {sync: syncObject};
           var messagelog = {log: {"-1" : "placeholder"}};
 
-          root.child('users').child(targetuser).child('queues').child(username).child('sync').set(queue);
-          root.child('users').child(targetuser).child('messages').child(username).child('log').set(messagelog);
+          root.child('users').child(targetuser).child('queues').child(username).set(queue);
+          root.child('users').child(targetuser).child('messages').child(username).set(messagelog);
           cbError(false);
         });
     });
@@ -294,7 +294,6 @@ function appendQueue(username, token, targetuser, message, cbError) {
       return;
     }
 
-    console.log(targetuser + " -> " + username);
     root.child('users')
       .child(targetuser)
       .child('queues')
@@ -387,7 +386,6 @@ function editQueue(userid, token, targetuser, index, message, cbError) {
         }
 
         if (index > syncObj.head && index <= syncObj.tail) {
-          console.log(message);
           root.child('users')
             .child(targetuser)
             .child('messages')
@@ -444,7 +442,6 @@ function readQueue(username, token, sourceuser, cbDataError) {
         }
 
         var syncObj = data.val();
-        console.log(syncObj);
         if (!syncObj) {
           cbDataError(false, "No sync data found in appendQueue.");
           return;
@@ -462,7 +459,6 @@ function readQueue(username, token, sourceuser, cbDataError) {
           .child(sourceuser)
           .child('log')
           .child(''+head).once('value', function(messageData) {
-            console.log(''+head + " " + sourceuser);
             var message = messageData.val();
             if (!message) {
               cbDataError(false, "Message does not exist yet");
@@ -527,6 +523,28 @@ function getUserAccessToken(name, userid, email, cbTokenError) {
     });
 }
 
+function addAdminWelcomeMessage(newUserId, newUserToken, cbError) {
+  
+  addFriend(newUserId, newUserToken, ADMIN_FRIEND_CODE, function(name, err) {
+    root.child('users')
+      .child('admin')
+      .child('welcomeMessage').once('value', function(messageData) {
+        var messageObj = messageData.val();
+        if (!messageObj) {
+          cbError("No welcome message found.");
+          return;
+        }
+        appendQueue('admin', ADMIN_TOKEN, newUserId, messageObj, function(error) {
+          if (error) {
+            cbError(error);
+            return;
+          }
+          cbError(false);
+        });
+      });
+  });
+}
+
 /**
  * Only call this method when the user id has been verified!
  */
@@ -559,8 +577,9 @@ function createUser(name, userid, email, cbTokenError) {
         root.child('users').child(userid).set(userObj);
         root.child('codes').child(friendCode).set(userid);
 
-        cbTokenError(accessToken, false);
-        return;
+        addAdminWelcomeMessage(userid, accessToken, function(error) {
+          cbTokenError(accessToken, false);
+        });
       });
   });
 }
@@ -574,7 +593,6 @@ function getUserData(userid, token, cbUserError) {
     .child(userid).once('value', function(userData) {
       var user = userData.val();
       if (!user['token']) {
-        console.log("user is false");
         cbUserError(false, "Invalid user or token.");
         return;
       }
@@ -582,7 +600,6 @@ function getUserData(userid, token, cbUserError) {
       var storedToken = user['token'];
 
       if (!(storedToken && (storedToken === token))) {
-        console.log("token dooesn't match");
         cbUserError("Invalid user or token.");
         return;
       }
