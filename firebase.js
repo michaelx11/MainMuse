@@ -693,9 +693,9 @@ function getMessagesFrom(userid, token, sourceuser, cbMessagesError) {
         var tail = syncObj.tail;
 
         root.child('users')
-          .child(targetuser)
-          .child('messages')
           .child(userid)
+          .child('messages')
+          .child(sourceuser)
           .child('log').once('value', function(logData) {
             var log = logData.val();
             if (!log) {

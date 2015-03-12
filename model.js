@@ -53,3 +53,5 @@ exports.getUserData = firebase.getUserData;
 
 // function getMessageList(userid, token, sourceuser, cbMessagesError)
 exports.getMessageList = firebase.getMessageList;
+
+exports.getMessagesFrom = firebase.getMessagesFrom;

@@ -211,7 +211,7 @@ function getMessagesFrom(req, res) {
     return;
   }
 
-  model.getMessageList(id, token, sourceid, function(messages, error) {
+  model.getMessagesFrom(id, token, sourceid, function(messages, error) {
     if (error) {
       res.send({"error": error});
     } else {
