@@ -37,7 +37,6 @@ function initializeUser(req, res) {
     return;
   }
 
-  console.log(req.query);
 
   model.initializeUser(id, token, name, email, function(accesstoken, error) {
     if (error) {
@@ -192,7 +191,30 @@ function getMessageList(req, res) {
     if (error) {
       res.send({"error": error});
     } else {
-      console.log(messages);
+      res.send({"messages": messages});
+    }
+  });
+}
+
+function getMessagesFrom(req, res) {
+  if (!req.query) {
+    res.send({"error": "no parameters."});
+    return;
+  }
+
+  var id = req.query.id;
+  var token = req.query.token;
+  var sourceid = req.query.sourceid;
+  
+  if (!(id && token && sourceid)) {
+    res.send({"error": "missing parameters."});
+    return;
+  }
+
+  model.getMessageList(id, token, sourceid, function(messages, error) {
+    if (error) {
+      res.send({"error": error});
+    } else {
       res.send({"messages": messages});
     }
   });
@@ -206,3 +228,4 @@ exports.editMessage = editMessage;
 exports.readMessage = readMessage;
 exports.getUserData = getUserData;
 exports.getMessageList = getMessageList;
+exports.getMessagesFrom = getMessagesFrom;

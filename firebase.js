@@ -609,7 +609,8 @@ function getUserData(userid, token, cbUserError) {
     });
 }
 
-// Gets list of messages in the queue 
+// List of messages user has written to target
+// Gets list of messages in the target queue 
 function getMessageList(userid, token, targetuser, cbMessagesError) {
   if (!(checkString(userid) && checkString(targetuser))) {
     cbMessagesError(false, "userid " + userid + " or target userid " + targetuser + " contains invalid characters.");
@@ -663,6 +664,60 @@ function getMessageList(userid, token, targetuser, cbMessagesError) {
   });
 }
 
+// List of message subject+data source has every written to user
+function getMessagesFrom(userid, token, sourceuser, cbMessagesError) {
+  if (!(checkString(userid) && checkString(sourceuser))) {
+    cbMessagesError(false, "userid " + userid + " or source userid " + targetuser + " contains invalid characters.");
+    return;
+  }
+
+  validateToken(userid, token, function(name, error) {
+    if (error) {
+      cbMessagesError(false, error);
+      return;
+    }
+
+    root.child('users')
+      .child(userid)
+      .child('queues')
+      .child(sourceuser)
+      .child('sync').once('value', function(syncData) {
+        var syncObj = syncData.val();
+        if (syncObj) {
+        } else {
+          cbMessagesError(false, "Queue does not exist.");
+          return;
+        }
+
+        var head = syncObj.head;
+        var tail = syncObj.tail;
+
+        root.child('users')
+          .child(targetuser)
+          .child('messages')
+          .child(userid)
+          .child('log').once('value', function(logData) {
+            var log = logData.val();
+            if (!log) {
+              cbMessagesError(false, 'Message log does not exist.');
+              return;
+            }
+
+
+            // The messages are stored as JSON strings
+            var parsedObj = {};
+            for (key in log) {
+              if (parseInt(key) <= parseInt(head)) {
+                parsedObj[key] = JSON.parse(log[key]);
+              }
+            }
+
+            cbMessagesError(parsedObj, false);
+          });
+      });
+  });
+}
+
 exports.addFriend = addFriend;
 exports.appendQueue = appendQueue;
 exports.editQueue = editQueue;
@@ -671,3 +726,4 @@ exports.createUser = createUser;
 exports.getUserData = getUserData;
 exports.getUserAccessToken = getUserAccessToken;
 exports.getMessageList = getMessageList;
+exports.getMessagesFrom = getMessagesFrom;

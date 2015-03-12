@@ -41,6 +41,7 @@ app.get('/editmessage', routes.editMessage);
 app.get('/readmessage', routes.readMessage);
 app.get('/getuserdata', routes.getUserData);
 app.get('/getmessagelist', routes.getMessageList);
+app.get('/getmessagesfrom', routes.getMessagesFrom);
 
 http.createServer(app).listen(app.get('port'), function() {
   console.log('Express server listening on port ' + app.get('port'));
