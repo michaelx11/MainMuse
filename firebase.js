@@ -5,6 +5,7 @@ var authConfig = require('./authConfig');
 var root = new Firebase(authConfig.firebaseURL);
 root.auth(authConfig.firebaseSecret);
 var http = require('http');
+var zlib = require('zlib');
 
 /*
  * Schema
@@ -465,7 +466,7 @@ function readQueue(username, token, sourceuser, cbDataError) {
               return;
             }
             
-            cbDataError(JSON.parse(message), false);
+            cbDataError(message, false);
             return;
           });
       });
@@ -654,7 +655,7 @@ function getMessageList(userid, token, targetuser, cbMessagesError) {
             var parsedObj = {};
             for (key in log) {
               if (parseInt(key) >= parseInt(head) && parseInt(key) <= parseInt(tail)) {
-                parsedObj[key] = JSON.parse(log[key]);
+                parsedObj[key] = log[key];
               }
             }
 
@@ -708,7 +709,7 @@ function getMessagesFrom(userid, token, sourceuser, cbMessagesError) {
             var parsedObj = {};
             for (key in log) {
               if (parseInt(key) <= parseInt(head)) {
-                parsedObj[key] = JSON.parse(log[key]);
+                parsedObj[key] = log[key];
               }
             }
 
@@ -716,6 +717,9 @@ function getMessagesFrom(userid, token, sourceuser, cbMessagesError) {
           });
       });
   });
+}
+
+function reorderMessages(userid, token) {
 }
 
 exports.addFriend = addFriend;
@@ -727,3 +731,50 @@ exports.getUserData = getUserData;
 exports.getUserAccessToken = getUserAccessToken;
 exports.getMessageList = getMessageList;
 exports.getMessagesFrom = getMessagesFrom;
+
+// Gzip compression
+function deflate(message, cbDataError) {
+  zlib.gzip(message, function(error, result) {
+    if (error) {
+      cbDataError(false, error);
+    } else {
+      var message = result.toString('base64');
+      cbDataError(message, false);
+    }
+  });
+}
+
+function inflate(message, cbDataError) {
+  zlib.gunzip(new Buffer(message, 'base64'), function(error, result) {
+    if (error) {
+      cbDataError(false, error);
+    } else {
+      var message = result.toString('base64');
+      cbDataError(message, false);
+    }
+  });
+}
+
+function convertStringTo64(string) {
+  return (new Buffer(string).toString('base64'));
+}
+
+function convertAllToBase64Encoding() {
+  root.child('users').once('value', function(usersData) {
+    var users = usersData.val();
+    for (var user in users) {
+      var messages = users[user]['messages'];
+      for (var messageKey in messages) {
+        var log = messages[messageKey]['log'];
+        for (var row in log) {
+          var content = log[row];
+          var compressed = zlib.gzipSync(content).toString('base64');
+          log[row] = compressed;
+        }
+      }
+    }
+    root.child('users').set(users);
+  });
+}
+
+//convertAllToBase64Encoding();

@@ -37,7 +37,6 @@ function initializeUser(req, res) {
     return;
   }
 
-
   model.initializeUser(id, token, name, email, function(accesstoken, error) {
     if (error) {
       res.send({"error": error});
