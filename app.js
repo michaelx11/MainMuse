@@ -33,11 +33,12 @@ if ('development' == app.get('env')) {
   app.use(express.errorHandler());
 }
 
+app.post('/appendmessage', routes.appendMessage);
+app.post('/editmessage', routes.editMessage);
+
 app.get('/verifyuser', routes.verifyUser);
 app.get('/initializeuser', routes.initializeUser);
 app.get('/addfriend', routes.addFriend);
-app.get('/appendmessage', routes.appendMessage);
-app.get('/editmessage', routes.editMessage);
 app.get('/readmessage', routes.readMessage);
 app.get('/getuserdata', routes.getUserData);
 app.get('/getmessagelist', routes.getMessageList);

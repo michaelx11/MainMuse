@@ -72,15 +72,15 @@ function addFriend(req, res) {
 }
 
 function appendMessage(req, res) {
-  if (!req.query) {
+  if (!req.body) {
     res.send({"error": "no parameters."});
     return;
   }
 
-  var id = req.query.id;
-  var token = req.query.token;
-  var targetid = req.query.targetid;
-  var message = req.query.message;
+  var id = req.body.id;
+  var token = req.body.token;
+  var targetid = req.body.targetid;
+  var message = req.body.message;
   
   if (!(id && token && targetid && message)) {
     res.send({"error": "missing parameters."});
@@ -98,16 +98,16 @@ function appendMessage(req, res) {
 
 
 function editMessage(req, res) {
-  if (!req.query) {
+  if (!req.body) {
     res.send({"error": "no parameters."});
     return;
   }
 
-  var id = req.query.id;
-  var token = req.query.token;
-  var targetid = req.query.targetid;
-  var index = req.query.index;
-  var message = req.query.message;
+  var id = req.body.id;
+  var token = req.body.token;
+  var targetid = req.body.targetid;
+  var index = req.body.index;
+  var message = req.body.message;
 
   if (!(id && token && targetid && index && message)) {
     res.send({"error": "missing parameters."});
