@@ -89,14 +89,20 @@ function readQueue(username, token, sourceuser, cbDataError) {
   });
 }
 
+var compressionErrorMessage = 'eyJzdWJqZWN0IjogIkVycm9yISIsICJib2R5IjoiRXJyb3Igd2l0aCBkZWNvbXByZXNzaW5nIHN0b3JlZCB0ZXh0LCBwbGVhc2UgZW1haWwgdXhtaWNoYWVsQGdtYWlsLmNvbSJ9';
+
 function getMessageList(userid, token, sourceuser, cbMessagesError) {
   firebase.getMessageList(userid, token, sourceuser, function(messages, error) {
     if (error) {
       cbMessagesError(false, error);
     } else {
       for (var key in messages) {
-        var unzipped = zlib.gunzipSync(new Buffer(messages[key], 'base64'));
-        messages[key] = unzipped.toString('base64');
+        try {
+          var unzipped = zlib.gunzipSync(new Buffer(messages[key], 'base64'));
+          messages[key] = unzipped.toString('base64');
+        } catch (err) {
+          messages[key] = compressionErrorMessage;
+        }
       }
       cbMessagesError(messages, false);
     }
@@ -109,8 +115,12 @@ function getMessagesFrom(userid, token, sourceuser, cbMessagesError) {
       cbMessagesError(false, error);
     } else {
       for (var key in messages) {
-        var unzipped = zlib.gunzipSync(new Buffer(messages[key], 'base64'));
-        messages[key] = unzipped.toString('base64');
+        try {
+          var unzipped = zlib.gunzipSync(new Buffer(messages[key], 'base64'));
+          messages[key] = unzipped.toString('base64');
+        } catch (err) {
+          messages[key] = compressionErrorMessage;
+        }
       }
       cbMessagesError(messages, false);
     }

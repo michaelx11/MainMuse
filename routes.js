@@ -190,6 +190,7 @@ function getMessageList(req, res) {
     if (error) {
       res.send({"error": error});
     } else {
+      console.log(messages);
       res.send({"messages": messages});
     }
   });
