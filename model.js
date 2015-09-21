@@ -79,6 +79,10 @@ function editQueue(username, token, targetuser, index, message, cbError) {
 
 function readQueue(username, token, sourceuser, cbDataError) {
   firebase.readQueue(username, token, sourceuser, function(data, error) {
+    if (error) {
+      cbDataError(false, error);
+      return;
+    }
     unzip(data, function(decompressedMessage, error) {
       if (error) {
         cbDataError(false, error);
